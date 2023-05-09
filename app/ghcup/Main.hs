@@ -161,6 +161,7 @@ main = do
 
 ENV variables:
   * GHCUP_INSTALL_BASE_PREFIX: the base of ghcup (default: $HOME)
+  * GHCUP_INSTALL_DIR_NAME: name of ghcup directory (default: .ghcup)
   * GHCUP_USE_XDG_DIRS: set to anything to use XDG style directories
 
 Report bugs at <https://github.com/haskell/ghcup-hs/issues>|]

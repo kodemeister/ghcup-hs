@@ -29,6 +29,7 @@ module GHCup.Utils.Dirs
   , relativeSymlink
   , withGHCupTmpDir
   , getConfigFilePath
+  , ghcupDirName
   , useXDG
   , cleanupTrash
 
@@ -203,7 +204,8 @@ ghcupBaseDir :: IO GHCupPath
 ghcupBaseDir
   | isWindows = do
       bdir <- fromMaybe "C:\\" <$> lookupEnv "GHCUP_INSTALL_BASE_PREFIX"
-      pure (GHCupPath (bdir </> "ghcup"))
+      dirName <- ghcupDirName
+      pure (GHCupPath (bdir </> dirName))
   | otherwise = do
       xdg <- useXDG
       if xdg
@@ -213,12 +215,14 @@ ghcupBaseDir
             Nothing -> do
               home <- liftIO getHomeDirectory
               pure (home </> ".local" </> "share")
-          pure (GHCupPath (bdir </> "ghcup"))
+          dirName <- ghcupDirName
+          pure (GHCupPath (bdir </> dirName))
         else do
           bdir <- lookupEnv "GHCUP_INSTALL_BASE_PREFIX" >>= \case
             Just r  -> pure r
             Nothing -> liftIO getHomeDirectory
-          pure (GHCupPath (bdir </> ".ghcup"))
+          dirName <- ghcupDirName
+          pure (GHCupPath (bdir </> dirName))
 
 
 -- | ~/.ghcup by default
@@ -237,12 +241,9 @@ ghcupConfigDir
             Nothing -> do
               home <- liftIO getHomeDirectory
               pure (home </> ".config")
-          pure (GHCupPath (bdir </> "ghcup"))
-        else do
-          bdir <- lookupEnv "GHCUP_INSTALL_BASE_PREFIX" >>= \case
-            Just r  -> pure r
-            Nothing -> liftIO getHomeDirectory
-          pure (GHCupPath (bdir </> ".ghcup"))
+          dirName <- ghcupDirName
+          pure (GHCupPath (bdir </> dirName))
+        else ghcupBaseDir
 
 
 -- | If 'GHCUP_USE_XDG_DIRS' is set (to anything),
@@ -279,7 +280,8 @@ ghcupCacheDir
             Nothing -> do
               home <- liftIO getHomeDirectory
               pure (home </> ".cache")
-          pure (GHCupPath (bdir </> "ghcup" </> "cache"))
+          dirName <- ghcupDirName
+          pure (GHCupPath (bdir </> dirName </> "cache"))
         else ghcupBaseDir <&> (\(GHCupPath gp) -> GHCupPath (gp </> "cache"))
 
 
@@ -299,7 +301,8 @@ ghcupLogsDir
             Nothing -> do
               home <- liftIO getHomeDirectory
               pure (home </> ".cache")
-          pure (GHCupPath (bdir </> "ghcup" </> "logs"))
+          dirName <- ghcupDirName
+          pure (GHCupPath (bdir </> dirName </> "logs"))
         else ghcupBaseDir <&> (\(GHCupPath gp) -> GHCupPath (gp </> "logs"))
 
 
@@ -333,7 +336,8 @@ ghcupTMPDir
             Nothing -> do
               home <- liftIO getHomeDirectory
               pure (home </> ".cache")
-          pure (GHCupPath (bdir </> "ghcup" </> "tmp"))
+          dirName <- ghcupDirName
+          pure (GHCupPath (bdir </> dirName </> "tmp"))
         else ghcupBaseDir <&> (\(GHCupPath gp) -> GHCupPath (gp </> "tmp"))
 
 
@@ -479,6 +483,19 @@ withGHCupTmpDir = do
     --------------
     --[ Others ]--
     --------------
+
+
+-- | Defaults to '.ghcup' on Unix and 'ghcup' on Windows.
+--
+-- If 'GHCUP_USE_XDG_DIRS' is set (to anything),
+-- then uses 'ghcup' as per xdg spec.
+ghcupDirName :: IO FilePath
+ghcupDirName
+  | isWindows = fromMaybe "ghcup" <$> lookupEnv "GHCUP_INSTALL_DIR_NAME"
+  | otherwise = do
+      xdg <- useXDG
+      let dirName = if xdg then "ghcup" else ".ghcup"
+      fromMaybe dirName <$> lookupEnv "GHCUP_INSTALL_DIR_NAME"
 
 
 useXDG :: IO Bool
