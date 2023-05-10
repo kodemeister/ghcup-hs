@@ -252,7 +252,13 @@ getDebugInfo = do
   let diBaseDir  = fromGHCupPath baseDir
   let diBinDir   = binDir
   diGHCDir       <- fromGHCupPath <$> lift ghcupGHCBaseDir
+  diHLSDir       <- fromGHCupPath <$> lift ghcupHLSBaseDir
   let diCacheDir = fromGHCupPath cacheDir
+  let diLogsDir  = fromGHCupPath logsDir
+  let diConfDir  = fromGHCupPath confDir
+  let diDbDir    = fromGHCupPath dbDir
+  let diRecycleDir = fromGHCupPath recycleDir
+  let diTmpDir   = fromGHCupPath tmpDir
   diArch         <- lE getArchitecture
   diPlatform     <- liftE getPlatform
   pure $ DebugInfo { .. }

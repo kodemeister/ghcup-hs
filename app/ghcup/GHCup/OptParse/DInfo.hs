@@ -68,7 +68,13 @@ prettyDebugInfo DebugInfo {..} = "Debug Info" <> "\n" <>
   "GHCup base dir: " <> diBaseDir <> "\n" <>
   "GHCup bin dir: " <> diBinDir <> "\n" <>
   "GHCup GHC directory: " <> diGHCDir <> "\n" <>
+  "GHCup HLS directory: " <> diHLSDir <> "\n" <>
   "GHCup cache directory: " <> diCacheDir <> "\n" <>
+  "GHCup logs directory: " <> diLogsDir <> "\n" <>
+  "GHCup config directory: " <> diConfDir <> "\n" <>
+  "GHCup database directory: " <> diDbDir <> "\n" <>
+  "GHCup recycle directory: " <> diRecycleDir <> "\n" <>
+  "GHCup temporary directory: " <> diTmpDir <> "\n" <>
   "Architecture: " <> prettyShow diArch <> "\n" <>
   "Platform: " <> prettyShow diPlatform <> "\n" <>
   "Version: " <> describe_result

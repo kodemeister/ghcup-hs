@@ -524,7 +524,13 @@ data DebugInfo = DebugInfo
   { diBaseDir  :: FilePath
   , diBinDir   :: FilePath
   , diGHCDir   :: FilePath
+  , diHLSDir   :: FilePath
   , diCacheDir :: FilePath
+  , diLogsDir  :: FilePath
+  , diConfDir  :: FilePath
+  , diDbDir    :: FilePath
+  , diRecycleDir :: FilePath
+  , diTmpDir   :: FilePath
   , diArch     :: Architecture
   , diPlatform :: PlatformResult
   }
