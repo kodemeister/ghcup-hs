@@ -108,13 +108,18 @@ int main()
     if (line == NULL)
       break;
 
-    if (line[4] != L' ' || line[5] != L'=' || line[6] != L' ')
+    const wchar_t* sep_ptr = wcschr(line, L'=');
+    if (sep_ptr == NULL)
+      continue;
+    const int sep_pos = (int)(sep_ptr - line);
+
+    if (sep_pos < 1 || line[sep_pos - 1] != L' ' || line[sep_pos + 1] != L' ')
       continue;
 
     const int linelen = wcslen(line);
-    const int len = linelen - 8 + (line[linelen - 1] != '\n');
+    const int len = linelen - sep_pos - 3 + (line[linelen - 1] != '\n');
 
-    if (line[0] == L'p' && line[1] == L'a' && line[2] == L't' && line[3] == L'h') {
+    if (line[0] == L'p' && line[1] == L'a' && line[2] == L't' && line[3] == L'h' && sep_pos == 5) {
       // Reading path
       path = calloc(len + 1, sizeof(wchar_t));
       wmemcpy(path, line + 7, len);
@@ -125,13 +130,36 @@ int main()
       continue;
     }
 
-    if (line[0] == L'a' && line[1] == L'r' && line[2] == L'g' && line[3] == L's') {
+    if (line[0] == L'a' && line[1] == L'r' && line[2] == L'g' && line[3] == L's' && sep_pos == 5) {
       // Reading args
       args = calloc(len + 1, sizeof(wchar_t));
       wmemcpy(args, line + 7, len);
 
       command_length += len + 1;
       args_length = len;
+
+      continue;
+    }
+
+    if (line[0] == L'$') {
+      // Reading environment variable
+      wchar_t* name = calloc(sep_pos - 1, sizeof(wchar_t));
+      wmemcpy(name, line + 1, sep_pos - 2);
+
+      wchar_t* value = calloc(len + 1, sizeof(wchar_t));
+      wmemcpy(value, line + sep_pos + 2, len);
+
+      const errno_t result = _wputenv_s(name, value);
+
+      free(name);
+      free(value);
+
+      if (result != 0) {
+        fprintf(stderr, "Could not set environment variable.\n");
+
+        exit_code = 1;
+        goto cleanup;
+      }
 
       continue;
     }
