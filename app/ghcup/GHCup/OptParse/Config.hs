@@ -134,7 +134,8 @@ updateSettings usl usr =
        gpgSetting' = uGPGSetting usl <|> uGPGSetting usr
        platformOverride' = uPlatformOverride usl <|> uPlatformOverride usr
        mirrors' = uMirrors usl <|> uMirrors usr
-   in UserSettings cache' metaCache' metaMode' noVerify' verbose' keepDirs' downloader' (updateKeyBindings (uKeyBindings usl) (uKeyBindings usr)) urlSource' noNetwork' gpgSetting' platformOverride' mirrors'
+       wrapperScripts' = uWrapperScripts usl <|> uWrapperScripts usr
+   in UserSettings cache' metaCache' metaMode' noVerify' verbose' keepDirs' downloader' (updateKeyBindings (uKeyBindings usl) (uKeyBindings usr)) urlSource' noNetwork' gpgSetting' platformOverride' mirrors' wrapperScripts'
  where
   updateKeyBindings :: Maybe UserKeyBindings -> Maybe UserKeyBindings -> Maybe UserKeyBindings
   updateKeyBindings Nothing Nothing = Nothing

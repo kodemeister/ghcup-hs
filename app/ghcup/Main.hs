@@ -90,6 +90,7 @@ toSettings options = do
          gpgSetting  = fromMaybe (fromMaybe (Types.gpgSetting defaultSettings) uGPGSetting) optGpg
          platformOverride = optPlatform <|> (uPlatformOverride <|> Types.platformOverride defaultSettings)
          mirrors  = fromMaybe (Types.mirrors defaultSettings) uMirrors
+         wrapperScripts = uWrapperScripts <|> Types.wrapperScripts defaultSettings
      in (Settings {..}, keyBindings)
 #if defined(INTERNAL_DOWNLOADER)
    defaultDownloader = Internal

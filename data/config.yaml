@@ -119,3 +119,13 @@ mirrors:
     authority:
       host: "mirror.sjtu.edu.cn"
 
+# Create wrapper scripts in bin directory instead of symlinks. Wrapper scripts allow to specify
+# additional arguments and environment variables per each Haskell tool without polluting the global
+# environment. E.g. if you want to change Cabal base directory, you could do:
+#
+# wrapper-scripts:
+#   Cabal:
+#     args: []
+#     env:
+#       CABAL_DIR: /home/user/.ghcup/cabal
+wrapper-scripts: null

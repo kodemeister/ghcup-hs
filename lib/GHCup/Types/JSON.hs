@@ -335,6 +335,7 @@ deriveJSON defaultOptions { fieldLabelModifier = removeLensFieldLabel } ''UserIn
 deriveJSON defaultOptions { fieldLabelModifier = \str' -> maybe str' (T.unpack . T.toLower) . T.stripPrefix (T.pack "authority") . T.pack $ str' } ''Authority
 deriveJSON defaultOptions { fieldLabelModifier = removeLensFieldLabel } ''DownloadMirror
 deriveJSON defaultOptions { fieldLabelModifier = removeLensFieldLabel } ''DownloadMirrors
+deriveJSON defaultOptions { fieldLabelModifier = \str' -> maybe str' T.unpack . T.stripPrefix (T.pack "ws-") . T.pack . kebab $ str' } ''WrapperScript
 deriveToJSON defaultOptions { fieldLabelModifier = kebab } ''Settings
 deriveToJSON defaultOptions { fieldLabelModifier = drop 2 . kebab } ''KeyBindings -- move under key-bindings key
 

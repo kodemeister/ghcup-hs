@@ -325,6 +325,16 @@ data MetaMode = Strict
 
 instance NFData MetaMode
 
+data WrapperScript = WrapperScript
+  { wsArgs :: [Text]
+  , wsEnv  :: Map Text (Maybe Text)
+  }
+  deriving (Show, GHC.Generic)
+
+instance NFData WrapperScript
+
+type WrapperScripts = Map Tool WrapperScript
+
 data UserSettings = UserSettings
   { uCache       :: Maybe Bool
   , uMetaCache   :: Maybe Integer
@@ -339,11 +349,12 @@ data UserSettings = UserSettings
   , uGPGSetting  :: Maybe GPGSetting
   , uPlatformOverride :: Maybe PlatformRequest
   , uMirrors     :: Maybe DownloadMirrors
+  , uWrapperScripts :: Maybe WrapperScripts
   }
   deriving (Show, GHC.Generic)
 
 defaultUserSettings :: UserSettings
-defaultUserSettings = UserSettings Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+defaultUserSettings = UserSettings Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
 
 fromSettings :: Settings -> Maybe KeyBindings -> UserSettings
 fromSettings Settings{..} Nothing =
@@ -361,6 +372,7 @@ fromSettings Settings{..} Nothing =
     , uGPGSetting = Just gpgSetting
     , uPlatformOverride = platformOverride
     , uMirrors = Just mirrors
+    , uWrapperScripts = wrapperScripts
   }
 fromSettings Settings{..} (Just KeyBindings{..}) =
   let ukb = UserKeyBindings
@@ -388,6 +400,7 @@ fromSettings Settings{..} (Just KeyBindings{..}) =
     , uGPGSetting = Just gpgSetting
     , uPlatformOverride = platformOverride
     , uMirrors = Just mirrors
+    , uWrapperScripts = wrapperScripts
   }
 
 data UserKeyBindings = UserKeyBindings
@@ -472,6 +485,7 @@ data Settings = Settings
   , noColor          :: Bool -- this also exists in LoggerConfig
   , platformOverride :: Maybe PlatformRequest
   , mirrors          :: DownloadMirrors
+  , wrapperScripts   :: Maybe WrapperScripts
   }
   deriving (Show, GHC.Generic)
 
@@ -479,7 +493,7 @@ defaultMetaCache :: Integer
 defaultMetaCache = 300 -- 5 minutes
 
 defaultSettings :: Settings
-defaultSettings = Settings False defaultMetaCache Lax False Never Curl False GHCupURL False GPGNone False Nothing (DM mempty)
+defaultSettings = Settings False defaultMetaCache Lax False Never Curl False GHCupURL False GPGNone False Nothing (DM mempty) Nothing
 
 instance NFData Settings
 
