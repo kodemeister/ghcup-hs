@@ -209,6 +209,7 @@ installCabalBin ver installDir forceInstall = do
 -- | Set the @~\/.ghcup\/bin\/cabal@ symlink.
 setCabal :: ( MonadMask m
             , MonadReader env m
+            , HasSettings env
             , HasDirs env
             , HasLog env
             , MonadFail m
@@ -230,7 +231,7 @@ setCabal ver = do
 
   -- create link
   let destL = targetFile
-  lift $ createLink destL cabalbin
+  lift $ createLink destL cabalbin Cabal
 
   liftIO (isShadowed cabalbin) >>= \case
     Nothing -> pure ()
@@ -258,6 +259,7 @@ unsetCabal = do
 -- after removal (e.g. setting it to an older version).
 rmCabalVer :: ( MonadMask m
               , MonadReader env m
+              , HasSettings env
               , HasDirs env
               , MonadThrow m
               , HasLog env

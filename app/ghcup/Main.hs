@@ -328,6 +328,7 @@ Report bugs at <https://github.com/haskell/ghcup-hs/issues>|]
                        , MonadFail m
                        , MonadReader env m
                        , HasGHCupInfo env
+                       , HasSettings env
                        , HasDirs env
                        , MonadThrow m
                        , MonadIO m
@@ -362,6 +363,7 @@ Report bugs at <https://github.com/haskell/ghcup-hs/issues>|]
           , MonadFail m
           , MonadReader env m
           , HasGHCupInfo env
+          , HasSettings env
           , HasDirs env
           , MonadThrow m
           , MonadIO m

@@ -45,16 +45,16 @@ import           Streamly.Internal.Data.IOFinalizer   ( newIOFinalizer, runIOFin
 --
 -- On windows, we have to emulate symlinks via shims,
 -- see 'createLink'.
-getLinkTarget :: FilePath -> IO FilePath
-getLinkTarget fp = do
+getSymlinkTarget :: FilePath -> IO FilePath
+getSymlinkTarget fp = do
   content <- readFile (dropExtension fp <.> "shim")
   [p] <- pure . filter ("path = " `isPrefixOf`) . lines $ content
   pure $ stripNewline $ dropPrefix "path = " p
 
 
--- | Checks whether the path is a link.
-pathIsLink :: FilePath -> IO Bool
-pathIsLink fp = doesPathExist (dropExtension fp <.> "shim")
+-- | Checks whether the path is a symlink.
+pathIsSymlink :: FilePath -> IO Bool
+pathIsSymlink fp = doesPathExist (dropExtension fp <.> "shim")
 
 
 
@@ -64,13 +64,13 @@ chmod_755 fp =
   in liftIO $ setPermissions fp perm
 
 
--- | Checks whether the binary is a broken link.
+-- | Checks whether the binary is a broken symlink.
 isBrokenSymlink :: FilePath -> IO Bool
 isBrokenSymlink fp = do
-  b <- pathIsLink fp
+  b <- pathIsSymlink fp
   if b
   then do
-    tfp <- getLinkTarget fp
+    tfp <- getSymlinkTarget fp
     not <$> doesPathExist
       -- this drops 'symDir' if 'tfp' is absolute
       (takeDirectory fp </> tfp)

@@ -646,6 +646,7 @@ fromVersion :: ( HasLog env
                , MonadFail m
                , MonadReader env m
                , HasGHCupInfo env
+               , HasSettings env
                , HasDirs env
                , MonadThrow m
                , MonadIO m
@@ -664,6 +665,7 @@ fromVersion' :: ( HasLog env
                 , MonadFail m
                 , MonadReader env m
                 , HasGHCupInfo env
+                , HasSettings env
                 , HasDirs env
                 , MonadThrow m
                 , MonadIO m
@@ -768,6 +770,7 @@ fromVersion' (SetToolTag t') tool =
 
 checkForUpdates :: ( MonadReader env m
                    , HasGHCupInfo env
+                   , HasSettings env
                    , HasDirs env
                    , HasPlatformReq env
                    , MonadCatch m

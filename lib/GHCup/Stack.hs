@@ -208,6 +208,7 @@ installStackUnpacked path installDir ver forceInstall = do
 -- | Set the @~\/.ghcup\/bin\/stack@ symlink.
 setStack :: ( MonadMask m
             , MonadReader env m
+            , HasSettings env
             , HasDirs env
             , HasLog env
             , MonadThrow m
@@ -229,7 +230,7 @@ setStack ver = do
 
   let stackbin = binDir </> "stack" <> exeExt
 
-  lift $ createLink targetFile stackbin
+  lift $ createLink targetFile stackbin Stack
 
   liftIO (isShadowed stackbin) >>= \case
     Nothing -> pure ()
@@ -257,6 +258,7 @@ unsetStack = do
 -- after removal (e.g. setting it to an older version).
 rmStackVer :: ( MonadMask m
               , MonadReader env m
+              , HasSettings env
               , HasDirs env
               , MonadThrow m
               , HasLog env

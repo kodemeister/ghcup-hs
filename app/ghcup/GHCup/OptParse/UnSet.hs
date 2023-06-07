@@ -173,6 +173,7 @@ unset :: ( Monad m
          , MonadMask m
          , MonadUnliftIO m
          , MonadFail m
+         , HasSettings env
          , HasDirs env
          , HasLog env
          )

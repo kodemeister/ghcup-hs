@@ -98,6 +98,7 @@ listVersions :: ( MonadCatch m
                 , HasLog env
                 , MonadIO m
                 , MonadReader env m
+                , HasSettings env
                 , HasDirs env
                 , HasPlatformReq env
                 , HasGHCupInfo env
@@ -149,6 +150,7 @@ listVersions lt' criteria = do
         pure (ghcvers <> cabalvers <> hlsvers <> stackvers <> ghcupvers)
   strayGHCs :: ( MonadCatch m
                , MonadReader env m
+               , HasSettings env
                , HasDirs env
                , MonadThrow m
                , HasLog env
@@ -322,6 +324,7 @@ listVersions lt' criteria = do
   -- NOTE: this are not cross ones, because no bindists
   toListResult :: ( HasLog env
                   , MonadReader env m
+                  , HasSettings env
                   , HasDirs env
                   , HasGHCupInfo env
                   , HasPlatformReq env

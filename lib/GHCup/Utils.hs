@@ -170,6 +170,7 @@ rmMinorGHCSymlinks tv@GHCTargetVersion{..} = do
 
 -- | Removes the set ghc version for the given target, if any.
 rmPlainGHC :: ( MonadReader env m
+              , HasSettings env
               , HasDirs env
               , HasLog env
               , MonadThrow m
@@ -296,7 +297,7 @@ ghcSrcInstalled ver = do
 
 
 -- | Whether the given GHC version is set as the current.
-ghcSet :: (MonadReader env m, HasDirs env, MonadThrow m, MonadIO m)
+ghcSet :: (MonadReader env m, HasSettings env, HasDirs env, MonadThrow m, MonadCatch m, MonadIO m)
        => Maybe Text   -- ^ the target of the GHC version, if any
                        --  (e.g. armv7-unknown-linux-gnueabihf)
        -> m (Maybe GHCTargetVersion)
@@ -307,8 +308,8 @@ ghcSet mtarget = do
 
   -- link destination is of the form ../ghc/<ver>/bin/ghc
   -- for old ghcup, it is ../ghc/<ver>/bin/ghc-<ver>
-  liftIO $ handleIO' NoSuchThing (\_ -> pure Nothing) $ do
-    link <- liftIO $ getLinkTarget ghcBin
+  handleIO' NoSuchThing (\_ -> pure Nothing) $ do
+    link <- getLinkTarget ghcBin
     Just <$> ghcLinkVersion link
  where
   ghcLinkVersion :: MonadThrow m => FilePath -> m GHCTargetVersion
@@ -368,18 +369,17 @@ cabalInstalled ver = do
 
 
 -- Return the currently set cabal version, if any.
-cabalSet :: (HasLog env, MonadReader env m, HasDirs env, MonadIO m, MonadThrow m, MonadCatch m) => m (Maybe Version)
+cabalSet :: (HasLog env, MonadReader env m, HasSettings env, HasDirs env, MonadIO m, MonadThrow m, MonadCatch m) => m (Maybe Version)
 cabalSet = do
   Dirs {..}  <- getDirs
   let cabalbin = binDir </> "cabal" <> exeExt
 
   handleIO' NoSuchThing (\_ -> pure Nothing) $ do
-    broken <- liftIO $ isBrokenSymlink cabalbin
+    broken <- isBrokenLink cabalbin
     if broken
       then pure Nothing
       else do
-        link <- liftIO
-          $ handleIO' InvalidArgument
+        link <- handleIO' InvalidArgument
             (\e -> pure $ Left (toException e))
           $ fmap Right $ getLinkTarget cabalbin
         case linkVersion =<< link of
@@ -465,18 +465,17 @@ getInstalledStacks = do
 
 -- Return the currently set stack version, if any.
 -- TODO: there's a lot of code duplication here :>
-stackSet :: (MonadReader env m, HasDirs env, MonadIO m, MonadThrow m, MonadCatch m, HasLog env) => m (Maybe Version)
+stackSet :: (MonadReader env m, HasSettings env, HasDirs env, MonadIO m, MonadThrow m, MonadCatch m, HasLog env) => m (Maybe Version)
 stackSet = do
   Dirs {..}  <- getDirs
   let stackBin = binDir </> "stack" <> exeExt
 
   handleIO' NoSuchThing (\_ -> pure Nothing) $ do
-    broken <- liftIO $ isBrokenSymlink stackBin
+    broken <- isBrokenLink stackBin
     if broken
       then pure Nothing
       else do
-        link <- liftIO
-          $ handleIO' InvalidArgument
+        link <- handleIO' InvalidArgument
             (\e -> pure $ Left (toException e))
           $ fmap Right $ getLinkTarget stackBin
         case linkVersion =<< link of
@@ -527,17 +526,17 @@ isLegacyHLS ver = do
 
 
 -- Return the currently set hls version, if any.
-hlsSet :: (MonadReader env m, HasDirs env, MonadIO m, MonadThrow m, MonadCatch m) => m (Maybe Version)
+hlsSet :: (MonadReader env m, HasSettings env, HasDirs env, MonadIO m, MonadThrow m, MonadCatch m) => m (Maybe Version)
 hlsSet = do
   Dirs {..}  <- getDirs
   let hlsBin = binDir </> "haskell-language-server-wrapper" <> exeExt
 
-  liftIO $ handleIO' NoSuchThing (\_ -> pure Nothing) $ do
-    broken <- isBrokenSymlink hlsBin
+  handleIO' NoSuchThing (\_ -> pure Nothing) $ do
+    broken <- isBrokenLink hlsBin
     if broken
       then pure Nothing
       else do
-        link <- liftIO $ getLinkTarget hlsBin
+        link <- getLinkTarget hlsBin
         Just <$> linkVersion link
  where
   linkVersion :: MonadThrow m => FilePath -> m Version
@@ -562,6 +561,7 @@ hlsSet = do
 
 -- | Return the GHC versions the currently selected HLS supports.
 hlsGHCVersions :: ( MonadReader env m
+                  , HasSettings env
                   , HasDirs env
                   , MonadIO m
                   , MonadThrow m
@@ -1276,6 +1276,7 @@ getInstalledFiles t v' = hideErrorDef [doesNotExistErrorType] Nothing $ do
 -- | Warn if the installed and set HLS is not compatible with the installed and
 -- set GHC version.
 warnAboutHlsCompatibility :: ( MonadReader env m
+                             , HasSettings env
                              , HasDirs env
                              , HasLog env
                              , MonadThrow m

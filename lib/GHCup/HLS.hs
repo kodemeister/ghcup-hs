@@ -568,6 +568,7 @@ compileHLS targetHLS ghcs jobs ov installDir cabalProject cabalProjectLocal upda
 
 -- | Set the haskell-language-server symlinks.
 setHLS :: ( MonadReader env m
+          , HasSettings env
           , HasDirs env
           , HasLog env
           , MonadIO m
@@ -609,7 +610,7 @@ setHLS ver shls mBinDir = do
         let target = if "haskell-language-server-wrapper" `isPrefixOf` fname
                      then fname <> "-" <> T.unpack (prettyVer ver) <> exeExt
                      else fname <> "~" <> T.unpack (prettyVer ver) <> exeExt
-        lift $ createLink destL (binDir </> target)
+        lift $ createLink destL (binDir </> target) HLS
 
     -- legacy and new
     SetHLSOnly -> do
@@ -620,13 +621,13 @@ setHLS ver shls mBinDir = do
       forM_ bins $ \f -> do
         let destL = f
         let target = (<> exeExt) . head . splitOn "~" $ f
-        lift $ createLink destL (binDir </> target)
+        lift $ createLink destL (binDir </> target) HLS
 
       -- set haskell-language-server-wrapper symlink
       let destL = "haskell-language-server-wrapper-" <> T.unpack (prettyVer ver) <> exeExt
       let wrapper = binDir </> "haskell-language-server-wrapper" <> exeExt
 
-      lift $ createLink destL wrapper
+      lift $ createLink destL wrapper HLS
 
       when (isNothing mBinDir) $
         lift warnAboutHlsCompatibility
@@ -662,6 +663,7 @@ unsetHLS = do
 -- after removal (e.g. setting it to an older version).
 rmHLSVer :: ( MonadMask m
             , MonadReader env m
+            , HasSettings env
             , HasDirs env
             , MonadThrow m
             , HasLog env

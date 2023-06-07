@@ -58,13 +58,13 @@ import GHC.IO.Exception (IOException(ioe_type), IOErrorType (..))
 --
 -- On windows, we have to emulate symlinks via shims,
 -- see 'createLink'.
-getLinkTarget :: FilePath -> IO FilePath
-getLinkTarget = getSymbolicLinkTarget
+getSymlinkTarget :: FilePath -> IO FilePath
+getSymlinkTarget = getSymbolicLinkTarget
 
 
--- | Checks whether the path is a link.
-pathIsLink :: FilePath -> IO Bool
-pathIsLink = pathIsSymbolicLink
+-- | Checks whether the path is a symlink.
+pathIsSymlink :: FilePath -> IO Bool
+pathIsSymlink = pathIsSymbolicLink
 
 
 chmod_755 :: MonadIO m => FilePath -> m ()
@@ -92,7 +92,7 @@ newFilePerms =
     `unionFileModes` otherReadMode
 
 
--- | Checks whether the binary is a broken link.
+-- | Checks whether the binary is a broken symlink.
 isBrokenSymlink :: FilePath -> IO Bool
 isBrokenSymlink fp = do
   try (pathIsSymbolicLink fp) >>= \case

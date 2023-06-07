@@ -126,6 +126,7 @@ fetchToolBindist v t mfp = do
 
 
 rmTool :: ( MonadReader env m
+          , HasSettings env
           , HasDirs env
           , HasLog env
           , MonadFail m
@@ -488,6 +489,7 @@ checkIfToolInstalled' tool ver =
 
 rmOldGHC :: ( MonadReader env m
             , HasGHCupInfo env
+            , HasSettings env
             , HasDirs env
             , HasLog env
             , MonadIO m
@@ -555,6 +557,7 @@ rmShareDir = do
 
 
 rmHLSNoGHC :: ( MonadReader env m
+              , HasSettings env
               , HasDirs env
               , HasLog env
               , MonadIO m

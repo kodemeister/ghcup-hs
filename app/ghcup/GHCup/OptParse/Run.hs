@@ -419,11 +419,11 @@ run RunOptions{..} runAppState leanAppstate runLogger = do
    setCabal' v tmp = do
           bin  <- liftE $ whereIsTool Cabal (mkTVer v)
           cbin <- liftIO $ canonicalizePath bin
-          lift $ createLink (relativeSymlink tmp cbin) (tmp </> ("cabal" <.> exeExt))
+          lift $ createLink (relativeSymlink tmp cbin) (tmp </> ("cabal" <.> exeExt)) Cabal
    setStack' v tmp = do
           bin  <- liftE $ whereIsTool Stack (mkTVer v)
           cbin <- liftIO $ canonicalizePath bin
-          lift $ createLink (relativeSymlink tmp cbin) (tmp </> ("stack" <.> exeExt))
+          lift $ createLink (relativeSymlink tmp cbin) (tmp </> ("stack" <.> exeExt)) Stack
    setHLS' v tmp = do
           Dirs {..}  <- getDirs
           legacy <- isLegacyHLS v
@@ -432,10 +432,10 @@ run RunOptions{..} runAppState leanAppstate runLogger = do
             -- TODO: factor this out
             hlsWrapper <- liftE @_ @'[NotInstalled] $ hlsWrapperBinary v !? (NotInstalled HLS (mkTVer v))
             cw <- liftIO $ canonicalizePath (binDir </> hlsWrapper)
-            lift $ createLink (relativeSymlink tmp cw) (tmp </> takeFileName cw)
+            lift $ createLink (relativeSymlink tmp cw) (tmp </> takeFileName cw) HLS
             hlsBins <- hlsServerBinaries v Nothing >>= liftIO . traverse (canonicalizePath . (binDir </>))
             forM_ hlsBins $ \bin ->
-              lift $ createLink (relativeSymlink tmp bin) (tmp </> takeFileName bin)
+              lift $ createLink (relativeSymlink tmp bin) (tmp </> takeFileName bin) HLS
             liftE $ setHLS v SetHLSOnly (Just tmp)
           else do
             liftE $ setHLS v SetHLS_XYZ (Just tmp)

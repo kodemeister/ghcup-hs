@@ -22,6 +22,8 @@ module GHCup.Prelude.File (
   module GHCup.Prelude.File.Search,
 
   chmod_755,
+  getSymlinkTarget,
+  pathIsSymlink,
   isBrokenSymlink,
   shellQuote,
   shellUnquote,
@@ -46,6 +48,7 @@ module GHCup.Prelude.File (
   exeExt',
   getLinkTarget,
   pathIsLink,
+  isBrokenLink,
   rmLink,
   createLink
 ) where
@@ -70,10 +73,18 @@ import           Control.Monad.IO.Unlift        ( MonadUnliftIO )
 import           Control.Exception.Safe
 import           Control.Monad.Reader
 import           Data.ByteString                ( ByteString )
+import           Data.Functor
+import           Data.List
+import           Data.Map.Strict                ( Map )
+import           Data.Maybe
+import           Data.Text                      ( Text )
 import           Haskus.Utils.Variant.Excepts
 import           System.FilePath
+import           System.IO
 import           Text.PrettyPrint.HughesPJClass (prettyShow)
 
+import qualified Data.ByteString               as B
+import qualified Data.Map.Strict               as M
 import qualified Data.Text                     as T
 import qualified Streamly.Prelude              as S
 import Control.DeepSeq (force)
@@ -373,6 +384,51 @@ exeExt'
   | otherwise = ""
 
 
+getLinkTarget :: (MonadReader env m, HasSettings env, MonadIO m) => FilePath -> m FilePath
+getLinkTarget fp
+  | isWindows = liftIO $ getSymlinkTarget fp
+  | otherwise = do
+      Settings { wrapperScripts } <- getSettings
+      case wrapperScripts of
+        Just _ -> liftIO $ do
+          content <- readFile fp
+          [p] <- pure . filter ("path=" `isPrefixOf`) . lines $ content
+          pure $ shellUnquote $ dropPrefix "path=" p
+        Nothing -> liftIO $ getSymlinkTarget fp
+
+
+pathIsLink :: (MonadReader env m, HasSettings env, MonadIO m) => FilePath -> m Bool
+pathIsLink fp
+  | isWindows = liftIO $ pathIsSymlink fp
+  | otherwise = do
+      Settings { wrapperScripts } <- getSettings
+      case wrapperScripts of
+        Just _ -> liftIO $ ifM (pathIsSymlink fp) (pure False) $ do
+          let shebang = "#!/bin/sh"
+          withFile fp ReadMode $ \h ->
+            B.hGet h (B.length shebang) <&> (== shebang)
+        Nothing -> liftIO $ pathIsSymlink fp
+
+
+isBrokenLink :: (MonadReader env m, HasSettings env, MonadIO m, MonadThrow m, MonadCatch m) => FilePath -> m Bool
+isBrokenLink fp
+  | isWindows = liftIO $ isBrokenSymlink fp
+  | otherwise = do
+      Settings { wrapperScripts } <- getSettings
+      case wrapperScripts of
+        Just _ -> try (pathIsLink fp) >>= \case
+          Right True -> do
+            let linkDir = takeDirectory fp
+            tfp <- getLinkTarget fp
+            liftIO $ not <$> doesPathExist
+              -- this drops 'linkDir' if 'tfp' is absolute
+              (linkDir </> tfp)
+          Right b -> pure b
+          Left e | isDoesNotExistError e -> pure False
+                 | otherwise -> throwIO e
+        Nothing -> liftIO $ isBrokenSymlink fp
+
+
 rmLink :: (MonadReader env m, HasDirs env, MonadIO m, MonadMask m) => FilePath -> m ()
 rmLink fp
   | isWindows = do
@@ -389,30 +445,37 @@ rmLink fp
 --
 -- This overwrites previously existing files.
 --
+-- On unix, when "wrapperScripts" setting is enabled, this creates wrapper
+-- shell scripts instead of symbolic links.
 -- On windows, this requires that 'ensureGlobalTools' was run beforehand.
 createLink :: ( MonadMask m
               , MonadThrow m
               , HasLog env
               , MonadIO m
               , MonadReader env m
+              , HasSettings env
               , HasDirs env
               , MonadUnliftIO m
               , MonadFail m
               )
            => FilePath      -- ^ path to the target executable
            -> FilePath      -- ^ path to be created
+           -> Tool          -- ^ tool for which the link is created
            -> m ()
-createLink link exe
+createLink link exe tool
   | isWindows = do
       dirs <- getDirs
       let shimGen = fromGHCupPath (cacheDir dirs) </> "gs.exe"
 
+      Settings { wrapperScripts } <- getSettings
       let shim = dropExtension exe <.> "shim"
           -- For hardlinks, link needs to be absolute.
           -- If link is relative, it's relative to the target exe.
           -- Note that (</>) drops lhs when rhs is absolute.
           fullLink = takeDirectory exe </> link
-          shimContents = "path = " <> fullLink
+          tools = fromMaybe M.empty wrapperScripts
+          WrapperScript {..} = M.findWithDefault (WrapperScript [] M.empty) tool tools
+          shimContents = createContents fullLink wsArgs wsEnv
 
       logDebug $ "rm -f " <> T.pack exe
       rmLink exe
@@ -424,5 +487,38 @@ createLink link exe
       logDebug $ "rm -f " <> T.pack exe
       hideError doesNotExistErrorType $ recycleFile exe
 
-      logDebug $ "ln -s " <> T.pack link <> " " <> T.pack exe
-      liftIO $ createFileLink link exe
+      Settings { wrapperScripts } <- getSettings
+      case wrapperScripts of
+        Just tools -> do
+          fullLink <- liftIO $ canonicalizePath $ takeDirectory exe </> link
+          let WrapperScript {..} = M.findWithDefault (WrapperScript [] M.empty) tool tools
+              scriptContents = createContents fullLink wsArgs wsEnv
+          logDebug $ "ln -s " <> T.pack fullLink <> " " <> T.pack exe
+          liftIO $ writeFile exe scriptContents
+          chmod_755 exe
+        Nothing -> do
+          logDebug $ "ln -s " <> T.pack link <> " " <> T.pack exe
+          liftIO $ createFileLink link exe
+ where
+  createContents :: FilePath -> [Text] -> Map Text (Maybe Text) -> String
+  createContents path args env
+    | isWindows = intercalate "\n"
+        $  "path = " <> path
+        :  (if not $ null args then ["args = " <> unwords (map formatArg args)] else [])
+        ++ map (uncurry formatVar) (M.toList env)
+    | otherwise = intercalate "\n"
+        $  "#!/bin/sh"
+        :  "path=" <> shellQuote path
+        :  map (uncurry formatVar) (M.toList env)
+        ++ [unwords $ "exec" : "\"$path\"" : map formatArg args ++ ["${1+\"$@\"}\n"]]
+
+  formatArg :: Text -> String
+  formatArg = shellQuote . T.unpack
+
+  formatVar :: Text -> Maybe Text -> String
+  formatVar name (Just value)
+    | isWindows = "$" <> T.unpack name <> " = " <> T.unpack value
+    | otherwise = "export " <> T.unpack name <> "=" <> shellQuote (T.unpack value)
+  formatVar name Nothing
+    | isWindows = "$" <> T.unpack name <> " = "
+    | otherwise = "unset " <> T.unpack name

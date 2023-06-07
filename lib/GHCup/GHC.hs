@@ -536,6 +536,7 @@ installGHCBin ver installDir forceInstall addConfArgs = do
 -- Additionally creates a @~\/.ghcup\/share -> ~\/.ghcup\/ghc\/\<ver\>\/share symlink@
 -- for 'SetGHCOnly' constructor.
 setGHC :: ( MonadReader env m
+          , HasSettings env
           , HasDirs env
           , HasLog env
           , MonadThrow m
@@ -592,7 +593,7 @@ setGHC ver sghc mBinDir = do
       let fullF = binDir </> targetFile  <> exeExt
           fileWithExt = bindir </> file <> exeExt
       destL <- binarySymLinkDestination binDir fileWithExt
-      lift $ createLink destL fullF
+      lift $ createLink destL fullF GHC
 
       when (targetFile == "ghc") $
         liftIO (isShadowed fullF) >>= \case
@@ -647,6 +648,7 @@ setGHC ver sghc mBinDir = do
       _ -> pure ()
 
 unsetGHC :: ( MonadReader env m
+            , HasSettings env
             , HasDirs env
             , HasLog env
             , MonadThrow m
@@ -673,6 +675,7 @@ unsetGHC = rmPlainGHC
 -- Will try to fix the ghc-x.y symlink after removal (e.g. to an
 -- older version).
 rmGHCVer :: ( MonadReader env m
+            , HasSettings env
             , HasDirs env
             , MonadThrow m
             , HasLog env
@@ -1280,6 +1283,7 @@ compileGHC targetGhc ov bstrap jobs mbuildConfig patches aargs buildFlavour hadr
 -- | Creates @ghc-x.y.z@ and @ghc-x.y@ symlinks. This is used for
 -- both installing from source and bindist.
 postGHCInstall :: ( MonadReader env m
+                  , HasSettings env
                   , HasDirs env
                   , HasLog env
                   , MonadThrow m
