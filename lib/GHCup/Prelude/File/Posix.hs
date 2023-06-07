@@ -16,6 +16,7 @@ Portability : POSIX
 module GHCup.Prelude.File.Posix where
 
 import           GHCup.Prelude.File.Posix.Traversals
+import           GHCup.Prelude.String.QQ
 
 import           Control.Exception.Safe
 import           Control.Monad.Reader
@@ -31,6 +32,7 @@ import           System.Posix.Error             ( throwErrnoPathIfMinus1Retry )
 import           System.Posix.Internals         ( withFilePath )
 import           System.Posix.Files
 import           System.Posix.Types
+import           Text.Regex.Posix
 
 
 import qualified System.Posix.Directory        as PD
@@ -333,3 +335,27 @@ getDirectoryContentsRecursiveBFSUnsafe :: (MonadMask m, MonadIO m, S.MonadAsync 
 getDirectoryContentsRecursiveBFSUnsafe = S.unfold getDirectoryContentsRecursiveUnfold
 
 
+-- | Escapes a string for POSIX compliant shells using single quotes.
+shellQuote :: String -> String
+shellQuote str
+  | needsQuoting = '\'' : foldr go "'" str
+  | otherwise = str
+ where
+  needsQuoting = str =~ ([s|[^a-zA-Z0-9./_-]|^$|] :: String)
+
+  go '\'' xs = "'\\''" <> xs
+  go x xs = x : xs
+
+
+-- | Unescapes a single-quoted string.
+shellUnquote :: String -> String
+shellUnquote = goOut
+ where
+  goOut ('\\' : '\'' : xs) = '\'' : goOut xs
+  goOut ('\'' : xs) = goIn xs
+  goOut (x : xs) = x : goOut xs
+  goOut [] = []
+
+  goIn ('\'' : xs) = goOut xs
+  goIn (x : xs) = x : goIn xs
+  goIn [] = []

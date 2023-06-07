@@ -15,6 +15,7 @@ module GHCup.Prelude.File.Windows where
 
 import           GHCup.Utils.Dirs
 import           GHCup.Prelude.Internal
+import           GHCup.Prelude.String.QQ
 
 import           Control.Exception.Safe
 import           Control.Monad
@@ -23,6 +24,7 @@ import           Data.List
 import qualified GHC.Unicode                  as U
 import           System.FilePath
 import qualified System.IO.Error              as IOE
+import           Text.Regex.Posix
 
 import qualified System.Win32.Info             as WS
 import qualified System.Win32.File             as WS
@@ -309,3 +311,39 @@ fromExtendedLengthPath ePath =
       not ('/' `elem` path ||
            "." `elem` splitDirectories path ||
            ".." `elem` splitDirectories path)
+
+
+-- | Escapes a string for C-style command line parser using double quotes.
+-- https://learn.microsoft.com/en-us/cpp/c-language/parsing-c-command-line-arguments
+shellQuote :: String -> String
+shellQuote str
+  | needsQuoting = '"' : fst (foldr go ("\"", True) str)
+  | otherwise = str
+ where
+  needsQuoting = str =~ ([s|[[:blank:]"]|^$|] :: String)
+
+  go '"' (xs, _) = ("\\\"" <> xs, True)
+  go '\\' (xs, True) = ("\\\\" <> xs, True)
+  go x (xs, _) = (x : xs, False)
+
+
+-- | Unescapes a double-quoted string.
+shellUnquote :: String -> String
+shellUnquote = goOut
+ where
+  goOut ('"' : xs) = goIn xs
+  goOut str@('\\' : _) = let (xs, ys) = unescape str in xs <> goOut ys
+  goOut (x : xs) = x : goOut xs
+  goOut [] = []
+
+  goIn ('"' : '"' : xs) = '"' : goIn xs
+  goIn ('"' : xs) = goOut xs
+  goIn str@('\\' : _) = let (xs, ys) = unescape str in xs <> goIn ys
+  goIn (x : xs) = x : goIn xs
+  goIn [] = []
+
+  unescape str = case span (== '\\') str of
+    (xs, ys@('"' : ys'))
+      | even $ length xs -> (replicate (length xs `div` 2) '\\', ys)
+      | otherwise -> (replicate (length xs `div` 2) '\\' <> "\"", ys')
+    (xs, ys) -> (xs, ys)

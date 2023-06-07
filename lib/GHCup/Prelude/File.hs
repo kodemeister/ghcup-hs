@@ -23,6 +23,8 @@ module GHCup.Prelude.File (
 
   chmod_755,
   isBrokenSymlink,
+  shellQuote,
+  shellUnquote,
   copyFile,
   deleteFile,
   install,
